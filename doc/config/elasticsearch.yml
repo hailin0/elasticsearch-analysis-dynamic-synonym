@@ -391,6 +391,9 @@ index:
       local_synonym:
           type: dynamic_synonym
           synonyms_path: dynamic-synonym/synonym.txt
+      remote_synonym:
+          type: dynamic_synonym
+          synonyms_path: http://127.0.0.1:8080/es-service-control/LoadWord/remote_ext_synonym.txt
     analyzer:
       ik:
           alias: [ik_analyzer]
@@ -404,15 +407,15 @@ index:
       ik_syno:
           type: custom
           tokenizer: ik
-          filter: [local_synonym]
+          filter: [local_synonym,remote_synonym]
       ik_syno_smart:
           type: custom
           tokenizer: ik
-          filter: [local_synonym]
+          filter: [local_synonym,remote_synonym]
           use_smart: true
       standard_syno:
           type: custom
-          filter: [local_synonym]
+          filter: [local_synonym,remote_synonym]
           tokenizer: standard
 index.analysis.analyzer.default.type : "ik"
 
