@@ -171,17 +171,24 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
 
         @Override
         public void run() {
-            if (synonymFile.isNeedReloadSynonymMap()) {
-                synonymMap = synonymFile.reloadSynonymMap();
-                /**
-                 * @see org.elasticsearch.synonym.DynamicSynonymTokenFilterFactory#create(org.apache.lucene.analysis.TokenStream)
-                 *      每个索引下最多创建8个TokenStream，即create方法最多会调用8次<br>
-                 *      当synonymMap更新时依次对8个DynamicSynonymFilter对象进行更新
-                 */
-                for (DynamicSynonymFilter dynamicSynonymFilter : dynamicSynonymFilters.keySet()) {
-                    dynamicSynonymFilter.update(synonymMap);
-                    logger.info("index:{} success reload synonym", indexName);
+            try{
+                if (synonymFile.isNeedReloadSynonymMap()) {
+                    synonymMap = synonymFile.reloadSynonymMap();
+                    if(synonymMap == null){
+                        return;
+                    }
+                    /**
+                     * @see org.elasticsearch.synonym.DynamicSynonymTokenFilterFactory#create(org.apache.lucene.analysis.TokenStream)
+                     *      每个索引下最多创建8个TokenStream，即create方法最多会调用8次<br>
+                     *      当synonymMap更新时依次对8个DynamicSynonymFilter对象进行更新
+                     */
+                    for (DynamicSynonymFilter dynamicSynonymFilter : dynamicSynonymFilters.keySet()) {
+                        dynamicSynonymFilter.update(synonymMap);
+                        logger.info("index:{} success reload synonym", indexName);
+                    }
                 }
+            }catch(Exception e){
+                logger.error("Monitor thread reload remote synonym {} error!", e, synonymFile.getFile());
             }
         }
     }

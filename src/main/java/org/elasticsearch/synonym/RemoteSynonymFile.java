@@ -107,18 +107,19 @@ public class RemoteSynonymFile implements SynonymFile {
                     String contentType = response.getEntity().getContentType().getValue();
                     charset = contentType.substring(contentType.lastIndexOf("=") + 1);
                 }
-                reader = new InputStreamReader(response.getEntity().getContent(), charset);
+                //reader = new InputStreamReader(response.getEntity().getContent(), charset);
+                br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),
+                        charset));
+                StringBuffer sb = new StringBuffer("");
+                String line = null;
+                while ((line = br.readLine()) != null) {
+                    logger.info("reload remote synonym: {}", line);
+                    sb.append(line).append(System.getProperty("line.separator"));
+                }
+                reader = new FastStringReader(sb.toString());
 
-                // br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),
-                // charset));
-                // StringBuffer sb = new StringBuffer("");
-                // String line = null;
-                // while ((line = br.readLine()) != null) {
-                // logger.info("reload remote synonym: {}", line);
-                // sb.append(line).append(System.getProperty("line.separator"));
-                // }
-                // reader = new FastStringReader(sb.toString());
-
+            }else{
+                logger.error("httpcode {} error! synonymFilePath:{}", response.getStatusLine().getStatusCode(), synonymFilePath);
             }
         } catch (IOException e) {
             logger.error("get remote synonym reader {} error!", e, synonymFilePath);
