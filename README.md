@@ -16,6 +16,8 @@ es1.1.2版本的同义词热更新插件，支持本地文件更新，http远程
               type: dynamic_synonym
               synonyms_path: http://127.0.0.1:8080/es-service-control/LoadWord/remote_ext_synonym.txt
               interval: 60
+              includeIndexs: [test,music]
+              excludeIndexs: [authors]
         analyzer:
           ik:
               alias: [ik_analyzer]
@@ -51,6 +53,10 @@ es1.1.2版本的同义词热更新插件，支持本地文件更新，http远程
       一个是 Last-Modified，一个是 ETag，任意一个变化都会更新。
       例子：synonyms_path: http://127.0.0.1:8080/es-service-control/LoadWord/remote_ext_synonym.txt
     
-    3，设置更新时间频率：interval: 60   单位为秒
+    3，设置更新时间频率：interval: 60   单位为秒，可以不写，默认值为60
     
-    4，必须编码都要求是UTF-8的文本文件
+    4，includeIndexs，数组，同义词对那些索引有效，不填相当于不使用此属性，即所有索引都使用同义词
+    
+    5，excludeIndexs，数组，同义词对那些索引无效，不填相当于不使用此属性，即所有索引都使用同义词
+    
+    6，必须编码都要求是UTF-8的文本文件
