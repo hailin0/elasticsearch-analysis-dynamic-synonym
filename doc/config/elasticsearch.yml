@@ -396,6 +396,8 @@ index:
           type: dynamic_synonym
           synonyms_path: http://127.0.0.1:8080/es-service-control/LoadWord/remote_ext_synonym.txt
           interval: 60
+          includeIndexs: [test,music]
+          excludeIndexs: [authors]
     analyzer:
       ik:
           alias: [ik_analyzer]
