@@ -64,6 +64,7 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
     private final boolean expand;
     private final String format;
     private final int interval;
+    private final String blankSynonymWord;
 
     private volatile ScheduledFuture<?> scheduledFuture;
     private Map<DynamicSynonymFilter, Integer> dynamicSynonymFilters;
@@ -101,9 +102,10 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
         this.format = settings.get("format");
         this.includeIndexs = new HashSet<String>(Arrays.asList(settings.getAsArray("includeIndexs")));
         logger.warn("includeIndexs:{}...", includeIndexs);
-        
         this.excludeIndexs = new HashSet<String>(Arrays.asList(settings.getAsArray("excludeIndexs")));
         logger.warn("excludeIndexs:{}...", excludeIndexs);
+        this.blankSynonymWord = settings.get("blankSynonymWord");
+        logger.warn("blankSynonymWord:{}...", blankSynonymWord);
 
         String tokenizerName = settings.get("tokenizer", "whitespace");
         TokenizerFactoryFactory tokenizerFactoryFactory = tokenizerFactories.get(tokenizerName);
@@ -133,7 +135,7 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
             for(String excludeIndex : excludeIndexs){
                 //支持匹配、正则
                 if (indexName.equals(excludeIndex.trim()) || indexName.matches(excludeIndex.trim())) {
-                    synonymFile = new BlankSynonymFile(env, analyzer, expand, format, synonymsPath);
+                    synonymFile = new BlankSynonymFile(env, analyzer, expand, format, synonymsPath,blankSynonymWord);
                     synonymMap = synonymFile.reloadSynonymMap();
                     this.indexForInclude = false;
                     
@@ -146,7 +148,7 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
             for(String includeIndex : includeIndexs){
                 //支持匹配、正则
                 if (!indexName.equals(includeIndex.trim()) || !indexName.matches(includeIndex.trim())) {
-                    synonymFile = new BlankSynonymFile(env, analyzer, expand, format, synonymsPath);
+                    synonymFile = new BlankSynonymFile(env, analyzer, expand, format, synonymsPath,blankSynonymWord);
                     synonymMap = synonymFile.reloadSynonymMap();
                     this.indexForInclude = false;
                     

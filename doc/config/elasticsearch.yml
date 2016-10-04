@@ -398,6 +398,7 @@ index:
           interval: 60
           includeIndexs: [test,music]
           excludeIndexs: [authors]
+          blankSynonymWord: 0-0-b,0-0-b
     analyzer:
       ik:
           alias: [ik_analyzer]

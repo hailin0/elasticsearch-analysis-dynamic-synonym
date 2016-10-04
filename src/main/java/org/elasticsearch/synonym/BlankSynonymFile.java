@@ -4,25 +4,13 @@
 package org.elasticsearch.synonym;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.Locale;
 
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.synonym.SolrSynonymParser;
 import org.apache.lucene.analysis.synonym.SynonymMap;
 import org.apache.lucene.analysis.synonym.WordnetSynonymParser;
-import org.elasticsearch.ElasticsearchIllegalArgumentException;
-import org.elasticsearch.common.base.Charsets;
 import org.elasticsearch.common.io.FastStringReader;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
@@ -51,13 +39,22 @@ public class BlankSynonymFile implements SynonymFile {
     /** 本地文件路径 相对于config目录 */
     private String synonymFilePath;
 
+    /**
+     * 空白同义词，没有意义的词，主要做索引隔离时使用
+     */
+    private String blankSynonymWord = "1-z-0-0-z,1-z-0-0-z";
+
     public BlankSynonymFile(Environment env, Analyzer analyzer, boolean expand, String format,
-            String synonymFilePath) {
+            String synonymFilePath, String blankSynonymWord) {
         this.analyzer = analyzer;
         this.expand = expand;
         this.format = format;
         this.env = env;
         this.synonymFilePath = synonymFilePath;
+        if (blankSynonymWord != null && !"".equals(blankSynonymWord)) {
+            this.blankSynonymWord = blankSynonymWord.contains(",") ? blankSynonymWord
+                    : blankSynonymWord.concat(",").concat(blankSynonymWord);
+        }
     }
 
     @Override
@@ -91,7 +88,7 @@ public class BlankSynonymFile implements SynonymFile {
         BufferedReader br = null;
         try {
             StringBuffer sb = new StringBuffer("");
-            sb.append("0-0-z,0-0-z").append(System.getProperty("line.separator"));
+            sb.append(blankSynonymWord).append(System.getProperty("line.separator"));
             reader = new FastStringReader(sb.toString());
         } catch (Exception e) {
             logger.error("get local synonym reader {} error!", e, synonymFilePath);
