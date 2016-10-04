@@ -1,7 +1,11 @@
 package org.elasticsearch.synonym;
 
 import java.io.Reader;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -15,6 +19,7 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
+import org.apache.lucene.analysis.synonym.SynonymFilter;
 import org.apache.lucene.analysis.synonym.SynonymMap;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.common.inject.Inject;
@@ -50,15 +55,18 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
 
     private SynonymMap synonymMap;
     private final boolean ignoreCase;
-
     private final String indexName;
+
+    private final Set<String> includeIndexs;
+    private final Set<String> excludeIndexs;
+    private final boolean indexForInclude;
     private final String synonymsPath;
     private final boolean expand;
     private final String format;
     private final int interval;
 
     private volatile ScheduledFuture<?> scheduledFuture;
-    private Map<DynamicSynonymFilter, Integer> dynamicSynonymFilters = new WeakHashMap<DynamicSynonymFilter, Integer>();
+    private Map<DynamicSynonymFilter, Integer> dynamicSynonymFilters;
 
     /**
      * 静态的id生成器
@@ -91,6 +99,11 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
         this.ignoreCase = settings.getAsBoolean("ignore_case", false);
         this.expand = settings.getAsBoolean("expand", true);
         this.format = settings.get("format");
+        this.includeIndexs = new HashSet<String>(Arrays.asList(settings.getAsArray("includeIndexs")));
+        logger.warn("includeIndexs:{}...", includeIndexs);
+        
+        this.excludeIndexs = new HashSet<String>(Arrays.asList(settings.getAsArray("excludeIndexs")));
+        logger.warn("excludeIndexs:{}...", excludeIndexs);
 
         String tokenizerName = settings.get("tokenizer", "whitespace");
         TokenizerFactoryFactory tokenizerFactoryFactory = tokenizerFactories.get(tokenizerName);
@@ -116,11 +129,40 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
         };
 
         SynonymFile synonymFile;
+        if (!excludeIndexs.isEmpty()) {
+            for(String excludeIndex : excludeIndexs){
+                //支持匹配、正则
+                if (indexName.equals(excludeIndex.trim()) || indexName.matches(excludeIndex.trim())) {
+                    synonymFile = new BlankSynonymFile(env, analyzer, expand, format, synonymsPath);
+                    synonymMap = synonymFile.reloadSynonymMap();
+                    this.indexForInclude = false;
+                    
+                    logger.warn("index:{} init BlankSynonymFile...", indexName);
+                    return;
+                }
+            }
+        }
+        if (!includeIndexs.isEmpty()) {
+            for(String includeIndex : includeIndexs){
+                //支持匹配、正则
+                if (!indexName.equals(includeIndex.trim()) || !indexName.matches(includeIndex.trim())) {
+                    synonymFile = new BlankSynonymFile(env, analyzer, expand, format, synonymsPath);
+                    synonymMap = synonymFile.reloadSynonymMap();
+                    this.indexForInclude = false;
+                    
+                    logger.warn("index:{} init BlankSynonymFile...", indexName);
+                    return;
+                }
+            }
+        }
+
         if (synonymsPath.startsWith("http://")) {
             synonymFile = new RemoteSynonymFile(env, analyzer, expand, format, synonymsPath);
         } else {
             synonymFile = new LocalSynonymFile(env, analyzer, expand, format, synonymsPath);
         }
+        this.indexForInclude = true;
+        dynamicSynonymFilters = new WeakHashMap<DynamicSynonymFilter, Integer>();
         synonymMap = synonymFile.reloadSynonymMap();
 
         // 加入后台线程监控
@@ -144,11 +186,13 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
      */
     @Override
     public TokenStream create(TokenStream tokenStream) {
-        logger.warn("index:{} TokenStream create filter count:{} init...", indexName,
-                dynamicSynonymFilters.size());
         DynamicSynonymFilter dynamicSynonymFilter = new DynamicSynonymFilter(tokenStream,
                 synonymMap, ignoreCase);
-        dynamicSynonymFilters.put(dynamicSynonymFilter, 1);
+        if (this.indexForInclude) {
+            dynamicSynonymFilters.put(dynamicSynonymFilter, 1);
+            logger.warn("index:{} TokenStream create filter count:{} init...", indexName,
+                    dynamicSynonymFilters.size());
+        }
         // fst is null means no synonyms
         return synonymMap.fst == null ? tokenStream : dynamicSynonymFilter;
     }
@@ -171,10 +215,10 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
 
         @Override
         public void run() {
-            try{
+            try {
                 if (synonymFile.isNeedReloadSynonymMap()) {
                     synonymMap = synonymFile.reloadSynonymMap();
-                    if(synonymMap == null){
+                    if (synonymMap == null) {
                         return;
                     }
                     /**
@@ -187,8 +231,9 @@ public class DynamicSynonymTokenFilterFactory extends AbstractTokenFilterFactory
                         logger.info("index:{} success reload synonym", indexName);
                     }
                 }
-            }catch(Exception e){
-                logger.error("Monitor thread reload remote synonym {} error!", e, synonymFile.getFile());
+            } catch (Exception e) {
+                logger.error("Monitor thread reload remote synonym {} error!", e,
+                        synonymFile.getFile());
             }
         }
     }
