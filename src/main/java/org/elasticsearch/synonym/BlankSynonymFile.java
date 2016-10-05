@@ -52,8 +52,7 @@ public class BlankSynonymFile implements SynonymFile {
         this.env = env;
         this.synonymFilePath = synonymFilePath;
         if (blankSynonymWord != null && !"".equals(blankSynonymWord)) {
-            this.blankSynonymWord = blankSynonymWord.contains(",") ? blankSynonymWord
-                    : blankSynonymWord.concat(",").concat(blankSynonymWord);
+            this.blankSynonymWord = blankSynonymWord;
         }
     }
 

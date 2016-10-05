@@ -60,10 +60,10 @@ es1.1.2版本的同义词热更新插件，支持本地文件更新，http远程
     
     5，excludeIndexs，数组，同义词对那些索引无效，不填相当于不使用此属性，即所有索引都使用同义词
     
-    6，blankSynonymWord, 字符串，blankSynonymWord可以不设置，默认值就是1-z-0-0-z,1-z-0-0-z。
+    6，blankSynonymWord, 字符串（其实就是一个同义词映射），blankSynonymWord可以不设置，默认值就是1-z-0-0-z,1-z-0-0-z。
     此属性只在includeIndexs或者excludeIndexs不为空时有效。
     
-    解释：blankSynonymWord可以不设置可以只填一个“词” 也可以填2个“词”以逗号分割，此属性只在includeIndexs或者
+    解释：blankSynonymWord可以不设置，也可以填2个“词”以逗号分割，此属性只在includeIndexs或者
     excludeIndexs不为空时有效，主要在做为不同的索引隔离同义词时使用，为不包含同义词的索引做一个默认词，
     为了不造成其他影响，一般使用无任何意义的词或者不存在的词。
     例如：1-z-0-0-z,1-z-0-0-z  表示将第一个词转换成第二个词，
