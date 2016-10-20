@@ -73,3 +73,6 @@ elasticsearch 1.1.2版本的同义词热更新插件，支持本地文件更新�
     如果在你的词典中存在冲突可以自定义为其他值。
     
     7，必须编码都要求是UTF-8的文本文件
+
+# 参考
+ es官网同义词配置页面地址<a href='https://www.elastic.co/guide/en/elasticsearch/reference/1.3/analysis-synonym-tokenfilter.html'>点击</a>
