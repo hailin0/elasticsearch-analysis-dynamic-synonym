@@ -1,12 +1,7 @@
 /**
- * 
+ *
  */
-package org.elasticsearch.synonym;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+package com.bellszhu.elasticsearch.plugin.analysis;
 
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -23,14 +18,11 @@ import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.env.Environment;
 
-/**
- * 
- * 远程文件
- * 
- * @author hailin0@yeah.net
- * @createDate 2016年9月24日
- *
- */
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+
 public class RemoteSynonymFile implements SynonymFile {
 
     public static ESLogger logger = Loggers.getLogger("dynamic-synonym");
@@ -45,31 +37,44 @@ public class RemoteSynonymFile implements SynonymFile {
 
     private Environment env;
 
-    /** 远程url地址 */
-    private String synonymFilePath;
+    /**
+     * 远程url地址
+     */
+    private String location;
 
-    /** 上次更改时间 */
+    /**
+     * 上次更改时间
+     */
     private String lastModified;
 
-    /** 资源属性 */
-    private String eTags;
+    /**
+     * 资源属性
+     */
+    private String eTag;
 
-    public RemoteSynonymFile(Environment env, Analyzer analyzer, boolean expand, String format,
-            String synonymFilePath) {
+    /**
+     * 初始化标志
+     */
+    private boolean init = true;
+
+    public RemoteSynonymFile(Environment env, Analyzer analyzer,
+                             boolean expand, String format, String location) {
         this.analyzer = analyzer;
         this.expand = expand;
         this.format = format;
         this.env = env;
-        this.synonymFilePath = synonymFilePath;
+        this.location = location;
 
         isNeedReloadSynonymMap();
     }
 
     @Override
     public SynonymMap reloadSynonymMap() {
+        Reader rulesReader = null;
         try {
-            logger.info("start reload remote synonym from {}.", synonymFilePath);
-            Reader rulesReader = getReader();
+            logger.info("start reload remote synonym from {}.", location);
+
+            rulesReader = getReader();
             SynonymMap.Builder parser = null;
 
             if ("wordnet".equalsIgnoreCase(format)) {
@@ -81,49 +86,77 @@ public class RemoteSynonymFile implements SynonymFile {
             }
             return parser.build();
         } catch (Exception e) {
-            logger.error("reload remote synonym {} error!", e, synonymFilePath);
+            try {
+                if (rulesReader != null) {
+                    rulesReader.close();
+                }
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
+            logger.error("reload remote synonym {} error!", e, location);
             throw new IllegalArgumentException(
-                    "could not reload remote synonyms file to build synonyms", e);
+                    "could not reload remote synonyms file to build synonyms",
+                    e);
         }
     }
 
     /**
      * 从远程服务器上下载自定义词条
      */
-    @Override
     public Reader getReader() {
         Reader reader = null;
-        RequestConfig rc = RequestConfig.custom().setConnectionRequestTimeout(10 * 1000)
-                .setConnectTimeout(10 * 1000).setSocketTimeout(60 * 1000).build();
+        RequestConfig rc = RequestConfig.custom()
+                .setConnectionRequestTimeout(10 * 1000)
+                .setConnectTimeout(10 * 1000).setSocketTimeout(60 * 1000)
+                .build();
         CloseableHttpResponse response = null;
         BufferedReader br = null;
-        HttpGet get = new HttpGet(synonymFilePath);
+        HttpGet get = new HttpGet(location);
         get.setConfig(rc);
         try {
             response = httpclient.execute(get);
             if (response.getStatusLine().getStatusCode() == 200) {
                 String charset = "UTF-8"; // 获取编码，默认为utf-8
-                if (response.getEntity().getContentType().getValue().contains("charset=")) {
-                    String contentType = response.getEntity().getContentType().getValue();
-                    charset = contentType.substring(contentType.lastIndexOf("=") + 1);
+                if (response.getEntity().getContentType().getValue()
+                        .contains("charset=")) {
+                    String contentType = response.getEntity().getContentType()
+                            .getValue();
+                    charset = contentType.substring(contentType
+                            .lastIndexOf("=") + 1);
                 }
+
                 //reader = new InputStreamReader(response.getEntity().getContent(), charset);
-                br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),
-                        charset));
-                StringBuffer sb = new StringBuffer("");
+                br = new BufferedReader(new InputStreamReader(response
+                        .getEntity().getContent(), charset));
+                StringBuffer sb = new StringBuffer();
                 String line = null;
                 while ((line = br.readLine()) != null) {
                     logger.info("reload remote synonym: {}", line);
                     sb.append(line).append(System.getProperty("line.separator"));
                 }
+                if (sb.length() <= 3) {
+                    sb.append("a=>a").append(System.getProperty("line.separator"));
+                    logger.info("synonym isnull ! default use: a=>a");
+                }
                 reader = new FastStringReader(sb.toString());
 
-            }else{
-                logger.error("httpcode {} error! synonymFilePath:{}", response.getStatusLine().getStatusCode(), synonymFilePath);
             }
         } catch (IOException e) {
-            logger.error("get remote synonym reader {} error!", e, synonymFilePath);
-            throw new IllegalArgumentException("IOException while reading remote synonyms file", e);
+            logger.error("get remote synonym reader {} error!", e, location);
+
+            /**
+             * es启动时url无法访问则填充空白的同义词
+             * es启动后url无法访问则抛出错误，外层放弃更新SynonymMap
+             */
+            if(init){
+                StringBuffer sb = new StringBuffer();
+                sb.append("a=>a").append(System.getProperty("line.separator"));
+                reader = new FastStringReader(sb.toString());
+                init = false;
+                logger.info("{} not be loaded! default use: a=>a",this.location);
+            }else{
+                throw new IllegalArgumentException("IOException while reading remote synonyms file", e);
+            }
         } finally {
             try {
                 if (response != null) {
@@ -141,17 +174,19 @@ public class RemoteSynonymFile implements SynonymFile {
 
     @Override
     public boolean isNeedReloadSynonymMap() {
-        RequestConfig rc = RequestConfig.custom().setConnectionRequestTimeout(10 * 1000)
-                .setConnectTimeout(10 * 1000).setSocketTimeout(15 * 1000).build();
-        HttpHead head = new HttpHead(synonymFilePath);
+        RequestConfig rc = RequestConfig.custom()
+                .setConnectionRequestTimeout(10 * 1000)
+                .setConnectTimeout(10 * 1000).setSocketTimeout(15 * 1000)
+                .build();
+        HttpHead head = new HttpHead(location);
         head.setConfig(rc);
 
         // 设置请求头
         if (lastModified != null) {
             head.setHeader("If-Modified-Since", lastModified);
         }
-        if (eTags != null) {
-            head.setHeader("If-None-Match", eTags);
+        if (eTag != null) {
+            head.setHeader("If-None-Match", eTag);
         }
 
         CloseableHttpResponse response = null;
@@ -160,23 +195,26 @@ public class RemoteSynonymFile implements SynonymFile {
             if (response.getStatusLine().getStatusCode() == 200) { // 返回200 才做操作
                 if (!response.getLastHeader("Last-Modified").getValue()
                         .equalsIgnoreCase(lastModified)
-                        || !response.getLastHeader("ETag").getValue().equalsIgnoreCase(eTags)) {
+                        || !response.getLastHeader("ETag").getValue()
+                        .equalsIgnoreCase(eTag)) {
 
                     lastModified = response.getLastHeader("Last-Modified") == null ? null
-                            : response.getLastHeader("Last-Modified").getValue();
-                    eTags = response.getLastHeader("ETag") == null ? null : response.getLastHeader(
-                            "ETag").getValue();
+                            : response.getLastHeader("Last-Modified")
+                            .getValue();
+                    eTag = response.getLastHeader("ETag") == null ? null
+                            : response.getLastHeader("ETag").getValue();
                     return true;
                 }
             } else if (response.getStatusLine().getStatusCode() == 304) {
                 return false;
             } else {
-                logger.info("remote synonym {} return bad code {}", synonymFilePath, response
-                        .getStatusLine().getStatusCode());
+                logger.info("remote synonym {} return bad code {}", location,
+                        response.getStatusLine().getStatusCode());
             }
 
         } catch (IOException e) {
-            logger.error("check need reload remote synonym {} error!", e, synonymFilePath);
+            logger.error("check need reload remote synonym {} error!", e,
+                    location);
         } finally {
             try {
                 if (response != null) {
@@ -189,12 +227,9 @@ public class RemoteSynonymFile implements SynonymFile {
         }
         return false;
     }
-    
-    /* (non-Javadoc)
-     * @see org.elasticsearch.synonym.SynonymFile#getPath()
-     */
+
     @Override
-    public String getFile() {
-        return synonymFilePath;
+    public String getLocation() {
+        return this.location;
     }
 }
