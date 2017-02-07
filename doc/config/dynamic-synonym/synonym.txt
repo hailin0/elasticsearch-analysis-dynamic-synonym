@@ -1,4 +1,0 @@
-i-pod, i pod, i pad => ipod,
-sea biscuit, sea biscit => seabiscuit,
-中文,汉语,汉字,
-团,本,队
