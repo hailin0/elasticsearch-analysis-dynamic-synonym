@@ -2,7 +2,7 @@
 elasticsearch 2.3版本的同义词热更新插件，支持本地文件更新，http远程文件更新。
 
 
-#使用方法
+# 使用方法
     1，部署插件：将doc/plugins/dynamic-synonym 目录放到 ${es-root}/plugins下
     2，配置使用：
 	index:
