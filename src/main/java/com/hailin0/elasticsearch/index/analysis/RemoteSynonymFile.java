@@ -1,7 +1,7 @@
 /**
  *
  */
-package com.bellszhu.elasticsearch.plugin.analysis;
+package com.hailin0.elasticsearch.index.analysis;
 
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -9,13 +9,13 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.logging.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.synonym.SolrSynonymParser;
 import org.apache.lucene.analysis.synonym.SynonymMap;
 import org.apache.lucene.analysis.synonym.WordnetSynonymParser;
 import org.elasticsearch.common.io.FastStringReader;
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.env.Environment;
 
 import java.io.BufferedReader;
@@ -25,7 +25,7 @@ import java.io.Reader;
 
 public class RemoteSynonymFile implements SynonymFile {
 
-    public static ESLogger logger = Loggers.getLogger("dynamic-synonym");
+    public static Logger logger = ESLoggerFactory.getLogger("dynamic-synonym");
 
     private CloseableHttpClient httpclient = HttpClients.createDefault();
 
@@ -148,13 +148,13 @@ public class RemoteSynonymFile implements SynonymFile {
              * es启动时url无法访问则填充空白的同义词
              * es启动后url无法访问则抛出错误，外层放弃更新SynonymMap
              */
-            if(init){
+            if (init) {
                 StringBuffer sb = new StringBuffer();
                 sb.append("a=>a").append(System.getProperty("line.separator"));
                 reader = new FastStringReader(sb.toString());
                 init = false;
-                logger.info("{} not be loaded! default use: a=>a",this.location);
-            }else{
+                logger.info("{} not be loaded! default use: a=>a", this.location);
+            } else {
                 throw new IllegalArgumentException("IOException while reading remote synonyms file", e);
             }
         } finally {

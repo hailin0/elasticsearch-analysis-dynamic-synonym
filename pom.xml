@@ -2,20 +2,20 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.bellszhu.elasticsearch</groupId>
+	<groupId>com.hailin0.elasticsearch</groupId>
 	<artifactId>elasticsearch-analysis-dynamic-synonym</artifactId>
-	<version>2.3.3</version>
+	<version>5.1.1</version>
 	<packaging>jar</packaging>
 	<name>elasticsearch-dynamic-synonym</name>
 	<description>Analysis-plugin for synonym</description>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<elasticsearch.version>2.3.3</elasticsearch.version>
-		<maven.compiler.target>1.7</maven.compiler.target>
+		<elasticsearch.version>5.1.1</elasticsearch.version>
+		<maven.compiler.target>1.8</maven.compiler.target>
 		<elasticsearch.plugin.name>analysis-dynamic-synonym</elasticsearch.plugin.name>
 		<elasticsearch.assembly.descriptor>${project.basedir}/src/main/assemblies/plugin.xml</elasticsearch.assembly.descriptor>
-		<elasticsearch.plugin.classname>com.bellszhu.elasticsearch.plugin.DynamicSynonymPlugin</elasticsearch.plugin.classname>
+		<elasticsearch.plugin.classname>com.hailin0.elasticsearch.plugin.analysis.DynamicSynonymPlugin</elasticsearch.plugin.classname>
 		<elasticsearch.plugin.jvm>true</elasticsearch.plugin.jvm>
 	</properties>
 
@@ -33,32 +33,6 @@
 		<version>9</version>
 	</parent>
 
-	<scm>
-		<connection>scm:git:git@github.com:bells/elasticsearch-analysis-dynamic-synonym.git</connection>
-		<developerConnection>scm:git:git@github.com:bells/elasticsearch-analysis-dynamic-synonym.git</developerConnection>
-		<url>https://github.com/bells/elasticsearch-analysis-dynamic-synonym</url>
-	</scm>
-
-	<!-- 设定jar获取的仓库 -->
-	<repositories>
-		<!--本地私服地址-->
-		<repository>
-			<id>gome</id>
-			<name>gome releases</name>
-			<url>http://10.128.11.68:8081/nexus/content/groups/public/</url>
-		</repository>
-
-	</repositories>
-
-	<!-- 设定插件仓库 -->
-	<pluginRepositories>
-		<pluginRepository>
-			<id>gome</id>
-			<name>gome releases</name>
-			<url>http://10.128.11.68:8081/nexus/content/groups/public/</url>
-		</pluginRepository>
-	</pluginRepositories>
-
 	<dependencies>
 		<dependency>
 			<groupId>org.elasticsearch</groupId>
@@ -75,6 +49,12 @@
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
 			<version>4.4.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-api</artifactId>
+			<version>2.7</version>
 			<scope>provided</scope>
 		</dependency>
 	</dependencies>

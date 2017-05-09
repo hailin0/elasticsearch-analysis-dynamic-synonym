@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.bellszhu.elasticsearch.plugin.analysis;
+package com.hailin0.elasticsearch.index.analysis;
 
 import org.apache.lucene.analysis.synonym.SynonymMap;
 
