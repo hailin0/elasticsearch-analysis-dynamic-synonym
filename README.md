@@ -1,5 +1,7 @@
 # elasticsearch-analysis-dynamic-synonym
-elasticsearch 2.3版本的同义词热更新插件，支持本地文件更新，http远程文件更新。
+elasticsearch 5.x版本的同义词热更新插件，支持本地文件更新，http远程文件更新。  
+
+# 5.x版本才写完上传，还未测试！！！
 
 
 # 使用方法
