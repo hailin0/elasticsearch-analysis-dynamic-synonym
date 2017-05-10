@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <assembly>
-    <id>analysis-dynamic-synonym</id>
+    <!--<id>analysis-dynamic-synonym</id>-->
+    <id></id>
     <formats>
         <format>zip</format>
     </formats>
