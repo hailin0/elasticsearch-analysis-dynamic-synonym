@@ -6,6 +6,7 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
+import org.apache.lucene.analysis.synonym.SynonymFilter;
 import org.apache.lucene.analysis.synonym.SynonymMap;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.settings.Settings;
@@ -13,6 +14,7 @@ import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.index.analysis.AbstractTokenFilterFactory;
 import org.elasticsearch.index.analysis.AnalysisRegistry;
+import org.elasticsearch.index.analysis.SynonymTokenFilterFactory;
 import org.elasticsearch.index.analysis.TokenizerFactory;
 import org.elasticsearch.indices.analysis.AnalysisModule;
 
@@ -34,26 +36,26 @@ public class DynamicSynonymTokenFilterFactory extends
 
 
     //配置属性
-    private final String indexName;
-    private final String location;
-    private final boolean ignoreCase;
-    private final boolean expand;
-    private final String format;
-    private final int interval;
+    protected final String indexName;
+    protected final String location;
+    protected final boolean ignoreCase;
+    protected final boolean expand;
+    protected final String format;
+    protected final int interval;
 
 
     /**
      * 每个过滤器实例产生的资源-index级别
      */
-    private SynonymMap synonymMap;
-    private volatile ScheduledFuture<?> scheduledFuture;
-    private CopyOnWriteArrayList<DynamicSynonymFilter> dynamicSynonymFilters = new CopyOnWriteArrayList<DynamicSynonymFilter>();
+    protected SynonymMap synonymMap;
+    protected volatile ScheduledFuture<?> scheduledFuture;
+    protected CopyOnWriteArrayList<SynonymDynamicSupport> dynamicSynonymFilters = new CopyOnWriteArrayList<SynonymDynamicSupport>();
 
     /**
      * load调度器-node级别
      */
-    private static final AtomicInteger id = new AtomicInteger(1);
-    private static ScheduledExecutorService monitorPool = Executors.newScheduledThreadPool(1,
+    protected static final AtomicInteger id = new AtomicInteger(1);
+    protected static ScheduledExecutorService monitorPool = Executors.newScheduledThreadPool(1,
             new ThreadFactory() {
                 @Override
                 public Thread newThread(Runnable r) {
@@ -125,7 +127,8 @@ public class DynamicSynonymTokenFilterFactory extends
         DynamicSynonymFilter dynamicSynonymFilter = new DynamicSynonymFilter(
                 tokenStream, synonymMap, ignoreCase);
         dynamicSynonymFilters.add(dynamicSynonymFilter);
-
+        SynonymFilter a;
+        SynonymTokenFilterFactory b;
         // fst is null means no synonyms
         return synonymMap.fst == null ? tokenStream : dynamicSynonymFilter;
     }
@@ -156,7 +159,7 @@ public class DynamicSynonymTokenFilterFactory extends
                         return;
                     }
                     synonymMap = newSynonymMap;
-                    Iterator<DynamicSynonymFilter> filters = dynamicSynonymFilters.iterator();
+                    Iterator<SynonymDynamicSupport> filters = dynamicSynonymFilters.iterator();
                     while (filters.hasNext()) {
                         filters.next().update(synonymMap);
                         logger.info("success reload synonym success! indexName:{} path:{}", indexName, synonymFile.getLocation());
