@@ -1,8 +1,6 @@
 # elasticsearch-analysis-dynamic-synonym
 elasticsearch 5.x版本的同义词热更新插件，支持本地文件更新，http远程文件更新。  
 
-# master分支为5.1.1，刚测试通过，有问题请提issues！
-
 
 # 使用方法
     1，部署插件：将doc/plugins/dynamic-synonym 目录放到 ${es-root}/plugins下
