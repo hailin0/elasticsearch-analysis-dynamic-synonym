@@ -1,7 +1,7 @@
 # elasticsearch-analysis-dynamic-synonym
 elasticsearch 5.x版本的同义词热更新插件，支持本地文件更新，http远程文件更新。  
 
-# master分支为5.1.1，刚测试通过，有问题请提issues！
+# master分支为5.3.0，支持dynamic_synonym_graph（synonym_graph），有问题请提issues！
 
 
 # 使用方法
