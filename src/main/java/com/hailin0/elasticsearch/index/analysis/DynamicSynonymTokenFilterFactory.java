@@ -127,8 +127,7 @@ public class DynamicSynonymTokenFilterFactory extends
         DynamicSynonymFilter dynamicSynonymFilter = new DynamicSynonymFilter(
                 tokenStream, synonymMap, ignoreCase);
         dynamicSynonymFilters.add(dynamicSynonymFilter);
-        SynonymFilter a;
-        SynonymTokenFilterFactory b;
+        
         // fst is null means no synonyms
         return synonymMap.fst == null ? tokenStream : dynamicSynonymFilter;
     }
