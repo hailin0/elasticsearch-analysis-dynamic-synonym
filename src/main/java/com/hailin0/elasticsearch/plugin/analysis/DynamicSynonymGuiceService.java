@@ -4,6 +4,8 @@ import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.analysis.AnalysisRegistry;
+import org.elasticsearch.indices.IndicesService;
+import org.elasticsearch.node.Node;
 
 /**
  * 插件生命周期内的服务,通过@Inject注解被es初始化，传递需要的Component进来

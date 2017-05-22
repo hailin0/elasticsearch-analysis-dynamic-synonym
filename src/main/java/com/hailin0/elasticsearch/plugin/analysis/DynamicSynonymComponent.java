@@ -1,6 +1,7 @@
 package com.hailin0.elasticsearch.plugin.analysis;
 
 import org.elasticsearch.index.analysis.AnalysisRegistry;
+import org.elasticsearch.indices.IndicesService;
 
 /**
  * 插件生命周期内的组件
@@ -11,6 +12,9 @@ import org.elasticsearch.index.analysis.AnalysisRegistry;
 public class DynamicSynonymComponent {
 
     private AnalysisRegistry analysisRegistry;
+
+    private IndicesService indicesService;
+
 
     public AnalysisRegistry getAnalysisRegistry() {
         return analysisRegistry;
@@ -23,6 +27,14 @@ public class DynamicSynonymComponent {
      */
     public void setAnalysisRegistry(AnalysisRegistry analysisRegistry) {
         this.analysisRegistry = analysisRegistry;
+    }
+
+    public void setIndicesService(IndicesService indicesService) {
+        this.indicesService = indicesService;
+    }
+
+    public IndicesService getIndicesService() {
+        return indicesService;
     }
 
 }
