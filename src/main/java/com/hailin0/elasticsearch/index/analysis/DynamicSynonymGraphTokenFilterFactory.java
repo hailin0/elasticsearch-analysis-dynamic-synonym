@@ -43,7 +43,8 @@ public class DynamicSynonymGraphTokenFilterFactory extends
     public TokenStream create(TokenStream tokenStream) {
         DynamicSynonymGraphFilter dynamicSynonymGraphFilter = new DynamicSynonymGraphFilter(
                 tokenStream, synonymMap, ignoreCase);
-        dynamicSynonymFilters.add(dynamicSynonymGraphFilter);
+        dynamicSynonymFilters.putIfAbsent(this.indexName,new CopyOnWriteArrayList<SynonymDynamicSupport>());
+        dynamicSynonymFilters.get(this.indexName).add(dynamicSynonymGraphFilter);
 
         // fst is null means no synonyms
         return synonymMap.fst == null ? tokenStream : dynamicSynonymGraphFilter;

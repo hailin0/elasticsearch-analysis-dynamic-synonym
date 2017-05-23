@@ -6,7 +6,6 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
-import org.apache.lucene.analysis.synonym.SynonymFilter;
 import org.apache.lucene.analysis.synonym.SynonymMap;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.settings.Settings;
@@ -14,14 +13,12 @@ import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.index.analysis.AbstractTokenFilterFactory;
 import org.elasticsearch.index.analysis.AnalysisRegistry;
-import org.elasticsearch.index.analysis.SynonymTokenFilterFactory;
 import org.elasticsearch.index.analysis.TokenizerFactory;
 import org.elasticsearch.indices.analysis.AnalysisModule;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 类注释/描述
@@ -42,25 +39,22 @@ public class DynamicSynonymTokenFilterFactory extends
     protected final boolean expand;
     protected final String format;
     protected final int interval;
-
+    protected SynonymMap synonymMap;
 
     /**
      * 每个过滤器实例产生的资源-index级别
      */
-    protected SynonymMap synonymMap;
-    protected volatile ScheduledFuture<?> scheduledFuture;
-    protected CopyOnWriteArrayList<SynonymDynamicSupport> dynamicSynonymFilters = new CopyOnWriteArrayList<SynonymDynamicSupport>();
-
+    protected static ConcurrentHashMap<String, CopyOnWriteArrayList<SynonymDynamicSupport>> dynamicSynonymFilters = new ConcurrentHashMap();
+    protected static ConcurrentHashMap<String, CopyOnWriteArrayList<ScheduledFuture>> scheduledFutures = new ConcurrentHashMap();
     /**
      * load调度器-node级别
      */
-    protected static final AtomicInteger id = new AtomicInteger(1);
-    protected static ScheduledExecutorService monitorPool = Executors.newScheduledThreadPool(1,
+    private static ScheduledExecutorService monitorPool = Executors.newScheduledThreadPool(1,
             new ThreadFactory() {
                 @Override
                 public Thread newThread(Runnable r) {
                     Thread thread = new Thread(r);
-                    thread.setName("monitor-synonym-Thread-" + id.getAndAdd(1));
+                    thread.setName("monitor-synonym-Thread");
                     return thread;
                 }
             });
@@ -115,8 +109,9 @@ public class DynamicSynonymTokenFilterFactory extends
         synonymMap = synonymFile.reloadSynonymMap();
 
         //加入监控队列，定时load
-        scheduledFuture = monitorPool.scheduleAtFixedRate(new Monitor(synonymFile),
-                interval, interval, TimeUnit.SECONDS);
+        scheduledFutures.putIfAbsent(this.indexName, new CopyOnWriteArrayList<ScheduledFuture>());
+        scheduledFutures.get(this.indexName)
+                .add(monitorPool.scheduleAtFixedRate(new Monitor(synonymFile), interval, interval, TimeUnit.SECONDS));
     }
 
     /**
@@ -126,12 +121,36 @@ public class DynamicSynonymTokenFilterFactory extends
     public TokenStream create(TokenStream tokenStream) {
         DynamicSynonymFilter dynamicSynonymFilter = new DynamicSynonymFilter(
                 tokenStream, synonymMap, ignoreCase);
-        dynamicSynonymFilters.add(dynamicSynonymFilter);
-        
+        dynamicSynonymFilters.putIfAbsent(this.indexName, new CopyOnWriteArrayList<SynonymDynamicSupport>());
+        dynamicSynonymFilters.get(this.indexName).add(dynamicSynonymFilter);
+
         // fst is null means no synonyms
         return synonymMap.fst == null ? tokenStream : dynamicSynonymFilter;
     }
 
+    /**
+     * 清理同义词资源
+     */
+    public static void closeIndDynamicSynonym(String indexName) {
+        CopyOnWriteArrayList<ScheduledFuture> futures = scheduledFutures.remove(indexName);
+        if (futures != null) {
+            for (ScheduledFuture sf : futures) {
+                sf.cancel(true);
+            }
+        }
+        dynamicSynonymFilters.remove(indexName);
+        logger.info("closeDynamicSynonym！ indexName:{} scheduledFutures.size:{} dynamicSynonymFilters.size:{}",
+                indexName, scheduledFutures.size(), dynamicSynonymFilters.size());
+    }
+
+    /**
+     * 清理插件资源
+     */
+    public static void closeDynamicSynonym() {
+        dynamicSynonymFilters.clear();
+        scheduledFutures.clear();
+        monitorPool.shutdownNow();
+    }
 
     /**
      * 监控逻辑
@@ -158,7 +177,7 @@ public class DynamicSynonymTokenFilterFactory extends
                         return;
                     }
                     synonymMap = newSynonymMap;
-                    Iterator<SynonymDynamicSupport> filters = dynamicSynonymFilters.iterator();
+                    Iterator<SynonymDynamicSupport> filters = dynamicSynonymFilters.get(indexName).iterator();
                     while (filters.hasNext()) {
                         filters.next().update(synonymMap);
                         logger.info("success reload synonym success! indexName:{} path:{}", indexName, synonymFile.getLocation());
