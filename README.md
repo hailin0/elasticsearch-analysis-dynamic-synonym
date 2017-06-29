@@ -44,3 +44,7 @@ elasticsearch 5.x版本的同义词热更新插件，支持本地文件更新，
 
 # 参考
  es官网同义词配置页面地址<a href='https://www.elastic.co/guide/en/elasticsearch/reference/2.3/analysis-synonym-tokenfilter.html'>点击</a>
+
+
+
+qq交流：568847614
